@@ -422,4 +422,3 @@ The above dashboard is a mock UI. The final dashboard may differ.
 
 ---
 
-*Built for hackathon submission. External data uses public APIs or mock data generators. Payments run on Razorpay sandbox. No real financial transactions are processed.*
