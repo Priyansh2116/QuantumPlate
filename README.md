@@ -65,10 +65,7 @@ ShieldRide is an AI-powered parametric income protection platform built exclusiv
 - **Income-Only**: Coverage is strictly limited to income loss from operational disruptions. Health, accident, and vehicle coverage are explicitly out of scope.
 
 **System flow**:
-```
-Onboarding → Earnings Baseline → Risk Scoring → Premium Quote → Policy Active
-     → Continuous Monitoring → Trigger Evaluation → Payout → Feedback Loop
-```
+![Systemflow](./assets/overflow.png)
 
 ---
 
