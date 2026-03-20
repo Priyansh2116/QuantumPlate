@@ -108,50 +108,7 @@ Workers with consistently high Behavioral Scores also gain access to enhanced be
 
 ## 5. System Architecture
 
-```
-+------------------+       +---------------------+
-|  Worker Frontend |       |   Admin Dashboard   |
-|  (Next.js / PWA) |       |   (React + Charts)  |
-+--------+---------+       +---------+-----------+
-         |                           |
-         v                           v
-+-----------------------------------------------+
-|         API Gateway (Node.js / Express)        |
-|   Auth | Rate Limiting | Request Routing       |
-+---+----------+----------+----------+-----------+
-    |          |          |          |
-    v          v          v          v
-+-------+ +--------+ +--------+ +----------+
-| User  | | Policy | | Risk   | | Trigger  |
-| Svc   | | Engine | | Engine | | Engine   |
-+-------+ +--------+ +---+----+ +----+-----+
-                          |           |
-                          v           v
-              +----------------+  +----------------+
-              | AI/ML Service  |  | Payout Service |
-              | (Python/FastAPI)|  | (Razorpay Mock)|
-              +---+---+---+----+  +----------------+
-                  |   |   |
-          +-------+   |   +-------+
-          v           v           v
-    +----------+ +----------+ +----------+
-    | Risk     | | Earnings | | Fraud    |
-    | Predictor| | Estimator| | Detector |
-    +----------+ +----------+ +----------+
-                      |
-                      v
-+-----------------------------------------------+
-|            External Data Layer                |
-|  Weather API | AQI | Zone Data | Peer Signals |
-+-----------------------------------------------+
-                      |
-                      v
-+-----------------------------------------------+
-|              Database Layer                   |
-|  PostgreSQL (policies, payouts, users)        |
-|  Redis (peer signals, trigger state, cache)   |
-+-----------------------------------------------+
-```
+![System Architecture](./assets/systemarch.jpeg)
 
 **Data flow**:
 1. Worker onboards via frontend; API Gateway routes profile data to User Service and initial risk scoring
