@@ -1,6 +1,7 @@
 # GigGuard: AI-Powered Parametric Income Protection for Quick-Commerce Delivery Workers
 
 ---
+**Demo Video**
 [![ShieldRide Demo](https://img.youtube.com/vi/VwUrIVXWNUs/maxresdefault.jpg)](https://youtu.be/VwUrIVXWNUs?si=xqD2qABC5ijJAj5r)
 ## Table of Contents
 
