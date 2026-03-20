@@ -56,6 +56,8 @@ With GigGuard, Rajan had purchased a weekly protection plan 48 hours prior, when
 
 ## 3. Solution Overview
 
+![logo](./assets/logo.png)
+
 GigGuard is an AI-powered parametric income protection platform built exclusively for quick-commerce delivery workers. It automatically pays out when verifiable external disruptions — weather, AQI, zone shutdowns, or demand collapse — reduce a worker's earnings below their established baseline.
 
 - **Parametric**: Payouts are triggered automatically when pre-defined, measurable conditions are met. There is no manual claims process. The system monitors conditions continuously and acts independently.
