@@ -376,6 +376,7 @@ The pricing system learns from worker behavior over time. Workers who consistent
 
 ## 13. Dashboard Features
 
+![Dashboard](./assets/dashboard.jpg)
 ### Worker Dashboard
 - **Home**: Weekly risk score (Low / Moderate / High / Elevated), active policy status and trigger indicators, earnings vs. baseline bar chart, one-tap plan renewal
 - **Earnings Tracker**: Multi-platform aggregated weekly and monthly view, day-by-day breakdown, disruption event annotations on the earnings timeline
