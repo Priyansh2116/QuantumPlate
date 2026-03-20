@@ -1,4 +1,4 @@
-# ShieldRide: AI-Powered Parametric Income Protection for Quick-Commerce Delivery Workers
+# GigGuard: AI-Powered Parametric Income Protection for Quick-Commerce Delivery Workers
 
 ---
 
@@ -50,13 +50,13 @@ Platforms: Blinkit (primary) + Zepto (secondary) | Weekly earnings: Rs. 4,800–
 
 **Scenario**: Week three of July. AQI in Delhi crosses 350; municipal advisories restrict outdoor movement 12–4 PM. Dark stores in Rajan's zone suspend dispatch. His effective delivery window shrinks by four hours. Weekly income drops to Rs. 2,900 — 45% below his average.
 
-With ShieldRide, Rajan had purchased a weekly protection plan 48 hours prior, when the system flagged elevated disruption probability from AQI forecasts. By Thursday, earnings impact data confirmed the shortfall, and Rs. 1,800 was transferred to his UPI account automatically. No claim form. No phone call. No documentation required.
+With GigGuard, Rajan had purchased a weekly protection plan 48 hours prior, when the system flagged elevated disruption probability from AQI forecasts. By Thursday, earnings impact data confirmed the shortfall, and Rs. 1,800 was transferred to his UPI account automatically. No claim form. No phone call. No documentation required.
 
 ---
 
 ## 3. Solution Overview
 
-ShieldRide is an AI-powered parametric income protection platform built exclusively for quick-commerce delivery workers. It automatically pays out when verifiable external disruptions — weather, AQI, zone shutdowns, or demand collapse — reduce a worker's earnings below their established baseline.
+GigGuard is an AI-powered parametric income protection platform built exclusively for quick-commerce delivery workers. It automatically pays out when verifiable external disruptions — weather, AQI, zone shutdowns, or demand collapse — reduce a worker's earnings below their established baseline.
 
 - **Parametric**: Payouts are triggered automatically when pre-defined, measurable conditions are met. There is no manual claims process. The system monitors conditions continuously and acts independently.
 - **AI-Powered**: Risk scoring, earnings baseline estimation, disruption prediction, fraud detection, and behavioral recommendations are all model-driven.
@@ -73,33 +73,33 @@ ShieldRide is an AI-powered parametric income protection platform built exclusiv
 
 ### 4.1 Platform-Agnostic Income Protection
 
-**What it is**: Most gig workers in India today earn across two or three platforms simultaneously. Coverage tied to a single platform misses a large fraction of the worker's real income. ShieldRide aggregates earnings across every platform the worker operates on, computing coverage against their true total income — not a partial slice of it.
+**What it is**: Most gig workers in India today earn across two or three platforms simultaneously. Coverage tied to a single platform misses a large fraction of the worker's real income. GigGuard aggregates earnings across every platform the worker operates on, computing coverage against their true total income — not a partial slice of it.
 
-**How it works**: During onboarding, workers declare all active platforms and provide earnings evidence (screenshots, export files, or stated averages). The system builds a unified multi-platform earnings baseline, which is updated each week using declared activity data. All pricing, payout calculations, and risk assessments are based on this aggregated figure. Workers do not need to purchase separate coverage per platform — one ShieldRide plan covers everything.
+**How it works**: During onboarding, workers declare all active platforms and provide earnings evidence (screenshots, export files, or stated averages). The system builds a unified multi-platform earnings baseline, which is updated each week using declared activity data. All pricing, payout calculations, and risk assessments are based on this aggregated figure. Workers do not need to purchase separate coverage per platform — one GigGuard's plan covers everything.
 
-**Why it matters**: A worker earning Rs. 2,800 from Blinkit and Rs. 2,000 from Zepto has a real weekly income of Rs. 4,800. A single-platform product covers at most Rs. 2,800 — leaving 42% of their income completely unprotected. ShieldRide closes this gap entirely. This also means that if one platform reduces orders during a disruption while another continues partially, the system accounts for the combined net impact rather than evaluating platforms in isolation.
+**Why it matters**: A worker earning Rs. 2,800 from Blinkit and Rs. 2,000 from Zepto has a real weekly income of Rs. 4,800. A single-platform product covers at most Rs. 2,800 — leaving 42% of their income completely unprotected. GigGuard closes this gap entirely. This also means that if one platform reduces orders during a disruption while another continues partially, the system accounts for the combined net impact rather than evaluating platforms in isolation.
 
 ---
 
 ### 4.2 Peer-Based Risk Intelligence
 
-**What it is**: Individual data on any single worker is limited and noisy. But when a disruption hits — heavy rain, a zone shutdown, a sudden demand collapse — it affects dozens or hundreds of workers in the same area simultaneously. ShieldRide uses the collective, anonymized activity patterns of nearby enrolled workers as a real-time disruption detection signal that is faster, more localized, and more actionable than any external data source alone.
+**What it is**: Individual data on any single worker is limited and noisy. But when a disruption hits — heavy rain, a zone shutdown, a sudden demand collapse — it affects dozens or hundreds of workers in the same area simultaneously. GigGuard uses the collective, anonymized activity patterns of nearby enrolled workers as a real-time disruption detection signal that is faster, more localized, and more actionable than any external data source alone.
 
 **How it works**: The system continuously tracks aggregated delivery metrics by zone in rolling 5–30 minute windows: order acceptance rates, active worker count, average delivery speed, and inter-delivery gap times. These metrics are compared against that zone's historical baseline for the same time window using a rolling z-score model. When zone-level metrics drop more than 1.8 standard deviations below baseline, a peer disruption signal is raised. Three consecutive flagged windows within a 90-minute period escalate the zone to trigger-ready status — meaning a payout can be activated even before an external API confirms the event.
 
-**Why it matters**: Weather APIs report city-wide or district-wide conditions with a 15–30 minute lag. Official AQI feeds update every hour. A flooded alley that stops 25 workers in a 400-meter radius shows up in peer data within minutes, long before any external source registers the disruption. This makes ShieldRide's trigger system faster, more hyperlocal, and significantly harder to game than systems that rely purely on external data. It also creates a self-improving network effect: the more workers enroll in a zone, the more accurate and granular the peer signal becomes.
+**Why it matters**: Weather APIs report city-wide or district-wide conditions with a 15–30 minute lag. Official AQI feeds update every hour. A flooded alley that stops 25 workers in a 400-meter radius shows up in peer data within minutes, long before any external source registers the disruption. This makes GigGuard's trigger system faster, more hyperlocal, and significantly harder to game than systems that rely purely on external data. It also creates a self-improving network effect: the more workers enroll in a zone, the more accurate and granular the peer signal becomes.
 
 ---
 
 ### 4.3 Behavioral Incentive Engine
 
-**What it is**: Workers who act on AI-generated recommendations — shifting zones ahead of a weather event, front-loading their shift to avoid a forecasted disruption window, or avoiding high-risk time slots — demonstrate lower income volatility and generate fewer payout events for the platform. ShieldRide rewards this behavior directly through premium discounts, improved coverage tiers, and early warning access, creating a product that actively helps workers earn more rather than simply compensating them after the fact.
+**What it is**: Workers who act on AI-generated recommendations — shifting zones ahead of a weather event, front-loading their shift to avoid a forecasted disruption window, or avoiding high-risk time slots — demonstrate lower income volatility and generate fewer payout events for the platform. GigGuard rewards this behavior directly through premium discounts, improved coverage tiers, and early warning access, creating a product that actively helps workers earn more rather than simply compensating them after the fact.
 
 **How it works**: Every week, the AI generates a personalized behavioral recommendation for each worker based on their zone's predicted risk profile and the worker's historical patterns. Examples: "Shift your Tuesday afternoon window to morning — AQI forecast is elevated after 2 PM" or "Zone 4 has 70% disruption probability Wednesday; Zone 7 is safer." Compliance with these recommendations is verified through GPS data and activity logs. Each verified compliance event earns a "compliance point" that contributes to the worker's Behavioral Score (0–100). The Behavioral Score from the prior week directly determines the discount applied to the next week's premium, as shown in the pricing model.
 
 Workers with consistently high Behavioral Scores also gain access to enhanced benefits: priority payout processing, access to a higher coverage tier, and early-alert notifications that give them a 30–60 minute head start before a disruption triggers.
 
-**Why it matters**: This transforms ShieldRide from a passive financial product into an active income-optimization tool. Workers are financially incentivized to make smarter operational decisions, which simultaneously reduces their own income volatility and reduces the platform's payout liability. The result is a self-reinforcing loop: informed workers earn more consistently, cost the platform less in payouts, and pay lower premiums over time. It is a genuine alignment of incentives between the worker and the insurer — rare in the insurance industry.
+**Why it matters**: This transforms GigGuard from a passive financial product into an active income-optimization tool. Workers are financially incentivized to make smarter operational decisions, which simultaneously reduces their own income volatility and reduces the platform's payout liability. The result is a self-reinforcing loop: informed workers earn more consistently, cost the platform less in payouts, and pay lower premiums over time. It is a genuine alignment of incentives between the worker and the insurer — rare in the insurance industry.
 
 ---
 
