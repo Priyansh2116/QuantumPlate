@@ -404,6 +404,8 @@ The pricing system learns from worker behavior over time. Workers who consistent
 
 ## 12. User Flow
 
+![Worker Onboarding & Premium Payout Process](./assets/userworkflow.png)
+
 **1. Onboarding**: Worker registers via mobile OTP. Declares active platforms, primary operating zone, typical working hours, and estimated weekly earnings. System runs an initial risk assessment and shows a preview of their income risk level and expected premium range.
 
 **2. Policy Creation**: Home screen displays "This Week's Risk Forecast" — disruption probability, recommended coverage amount, and the weekly premium. Worker taps "Get Protected," reviews trigger conditions and maximum payout, and pays via UPI (simulated). Policy activates immediately upon payment.
