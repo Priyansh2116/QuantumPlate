@@ -296,6 +296,7 @@ The pricing system learns from worker behavior over time. Workers who consistent
 
 ## 9. Parametric Triggers
 
+![triggers](./assets/risknav.jpg)
 ### Trigger 1: Sustained Rainfall
 **Condition**: Rainfall intensity exceeds 35 mm/hr for 90+ consecutive minutes during the worker's active delivery hours, corroborated by a 30%+ drop in zone-level order acceptance rates from peer data.  
 **Data sources**: Weather API, GPS-confirmed zone assignment, peer activity signal  
