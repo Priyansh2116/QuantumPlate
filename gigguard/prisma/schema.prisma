@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Worker {
+  id              String    @id @default(cuid())
+  name            String
+  phone           String    @unique
+  zone            String
+  platforms       String[]
+  weeklyEarnings  Float
+  hoursPerWeek    Float
+  behavioralScore Int       @default(50)
+  riskLevel       String    @default("Moderate")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  policies        Policy[]
+  claims          Claim[]
+}
+
+model Policy {
+  id               String    @id @default(cuid())
+  workerId         String
+  weekStart        DateTime
+  weekEnd          DateTime
+  premium          Int
+  coverageCeiling  Int
+  status           String    @default("Active")
+  triggers         String[]
+  premiumBreakdown Json
+  razorpayOrderId  String?   @unique
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  worker           Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  claims           Claim[]
+}
+
+model Claim {
+  id             String    @id @default(cuid())
+  policyId       String
+  workerId       String
+  triggerType    String
+  triggerData    Json
+  status         String    @default("Pending")
+  claimedAmount  Int
+  approvedAmount Int       @default(0)
+  fraudScore     Int       @default(0)
+  fraudFlags     String[]
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  policy         Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  worker         Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
+}
+
+model ZoneWeatherCache {
+  id        String   @id @default(cuid())
+  zone      String   @unique
+  data      Json
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
