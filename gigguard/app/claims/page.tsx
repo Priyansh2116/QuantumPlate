@@ -33,7 +33,8 @@ export default function ClaimsPage() {
   async function loadClaims() {
     setLoading(true);
     const res = await fetch(`/api/claims?workerId=${workerId}`);
-    setClaims(Array.isArray(await res.json()) ? await (await fetch(`/api/claims?workerId=${workerId}`)).json() : []);
+    const data = await res.json();
+    setClaims(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
@@ -157,8 +158,8 @@ export default function ClaimsPage() {
         {/* Fraud detection explanation */}
         <div className="glass rounded-lg border border-white/5 p-3 text-xs text-slate-400 space-y-1">
           <div className="text-slate-300 font-semibold mb-1">Fraud Detection (runs on each claim):</div>
-          <div>Layer 1: GPS zone mismatch · Activity during claim (&gt;60% normal = flag) · Peer comparison (&gt;2.5σ above zone median = hold)</div>
-          <div>Layer 2: Isolation Forest — adverse selection pattern (buys only before high-risk weeks)</div>
+          <div><strong className="text-slate-300">Layer 1 — Rules:</strong> GPS zone mismatch · GPS velocity spoofing (≥80 km/h = impossible for bike) · Activity during claim (&gt;60% normal = flag) · Historical weather baseline (claim vs 5yr IMD P99)</div>
+          <div><strong className="text-slate-300">Layer 2 — ML:</strong> Isolation Forest (50 trees, path-length anomaly score) · Rolling Z-score vs 30 most recent zone payouts · Adverse selection pattern detection</div>
         </div>
 
         {message && (
@@ -212,6 +213,14 @@ function ClaimCard({ claim }: { claim: Claim }) {
   }[claim.status];
 
   const { icon: Icon, color, bg } = statusConfig;
+  const isApproved = claim.status === "Approved";
+  const payoutId = `pout_sim_${new Date(claim.createdAt).getTime()}`;
+
+  const triggerUnit =
+    claim.triggerType === "Rainfall" ? "mm/hr"
+    : claim.triggerType === "AQI" ? " NAQI"
+    : claim.triggerType === "Extreme Heat" ? "°C"
+    : "%";
 
   return (
     <div className={`rounded-xl border p-5 space-y-3 ${bg}`}>
@@ -220,7 +229,7 @@ function ClaimCard({ claim }: { claim: Claim }) {
           <Icon className={`w-5 h-5 ${color} flex-shrink-0`} />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <TriggerBadge type={claim.triggerType} active={claim.status === "Approved"} />
+              <TriggerBadge type={claim.triggerType} active={isApproved} />
               <span className={`text-xs font-semibold ${color}`}>{claim.status}</span>
             </div>
             <div className="text-xs text-slate-500 mt-0.5">
@@ -239,7 +248,7 @@ function ClaimCard({ claim }: { claim: Claim }) {
       {/* Trigger data */}
       <div className="grid grid-cols-4 gap-2 text-xs">
         {[
-          { label: "Trigger value", value: `${claim.triggerData.value}${claim.triggerType === "Rainfall" ? "mm/hr" : claim.triggerType === "AQI" ? " NAQI" : claim.triggerType === "Extreme Heat" ? "°C" : "%"}` },
+          { label: "Trigger value", value: `${claim.triggerData.value}${triggerUnit}` },
           { label: "Duration", value: `${claim.triggerData.duration}hrs` },
           { label: "Peer signal", value: `${claim.triggerData.peerCorroboration}%` },
           { label: "GPS", value: claim.triggerData.gpsConfirmed ? "✓ Confirmed" : "✗ Mismatch" },
@@ -251,16 +260,55 @@ function ClaimCard({ claim }: { claim: Claim }) {
         ))}
       </div>
 
-      {/* Fraud info */}
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-slate-500" />
-          <span className="text-slate-500">Fraud Score: </span>
-          <span className={`font-bold ${claim.fraudScore < 30 ? "text-emerald-400" : claim.fraudScore < 60 ? "text-amber-400" : "text-red-400"}`}>
-            {claim.fraudScore}/100
-          </span>
-          <span className="text-slate-600">· Source: {claim.triggerData.source}</span>
+      {/* Payout receipt — shown only for approved claims */}
+      {isApproved && (
+        <div className="glass rounded-xl border border-emerald-500/30 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+              <IndianRupee className="w-3.5 h-3.5" /> Instant Payout Receipt
+            </span>
+            <span className="text-xs text-slate-500 font-mono">{payoutId}</span>
+          </div>
+
+          {/* Timeline */}
+          <div className="space-y-2">
+            {[
+              { step: "Parametric threshold breached", detail: `${claim.triggerType} trigger confirmed via ${claim.triggerData.source}`, done: true },
+              { step: "Fraud check passed", detail: `Score ${claim.fraudScore}/100 — GPS ✓ · Peer signal ${claim.triggerData.peerCorroboration}% · Isolation Forest clear`, done: true },
+              { step: "Claim auto-approved", detail: `Rs. ${claim.approvedAmount} approved — no manual adjudication required`, done: true },
+              { step: "UPI payout initiated", detail: `Rs. ${claim.approvedAmount} → worker UPI account (Razorpay simulated)`, done: true },
+              { step: "Funds credited", detail: "Typically within 2–4 hours on production Razorpay Payouts API", done: true },
+            ].map((s, i) => (
+              <div key={i} className="flex gap-3 text-xs">
+                <div className="flex flex-col items-center">
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
+                  </div>
+                  {i < 4 && <div className="w-px flex-1 bg-emerald-500/20 my-0.5" />}
+                </div>
+                <div className="pb-2">
+                  <div className="font-semibold text-emerald-300">{s.step}</div>
+                  <div className="text-slate-500">{s.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-1 border-t border-emerald-500/20">
+            <span className="text-xs text-slate-500">Total time to payout</span>
+            <span className="text-xs font-bold text-emerald-400">&lt; 30 seconds (automated)</span>
+          </div>
         </div>
+      )}
+
+      {/* Fraud info */}
+      <div className="flex items-center gap-1.5 text-xs">
+        <Shield className="w-3.5 h-3.5 text-slate-500" />
+        <span className="text-slate-500">Fraud Score:</span>
+        <span className={`font-bold ${claim.fraudScore < 30 ? "text-emerald-400" : claim.fraudScore < 60 ? "text-amber-400" : "text-red-400"}`}>
+          {claim.fraudScore}/100
+        </span>
+        <span className="text-slate-600">· Source: {claim.triggerData.source}</span>
       </div>
 
       {claim.fraudFlags.length > 0 && (

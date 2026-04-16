@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { signToken } from "@/lib/auth";
+import { signToken, hashPassword } from "@/lib/auth";
 import { RegisterWorkerSchema, formatZodError } from "@/lib/validation";
 import { getZoneData, getRiskLevel } from "@/lib/weather";
 import { Zone } from "@/lib/types";
@@ -27,22 +27,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
     }
 
-    const { name, phone, zone, platforms, weeklyEarnings, hoursPerWeek } = parsed.data;
+    const { name, phone, password, zone, platforms, weeklyEarnings, hoursPerWeek } = parsed.data;
 
     // Duplicate phone check
     const existing = await prisma.worker.findUnique({ where: { phone } });
     if (existing) {
-      return NextResponse.json({ error: "Phone number already registered" }, { status: 409 });
+      return NextResponse.json({ error: "Phone number already registered. Please sign in." }, { status: 409 });
     }
 
     // Get live zone risk for initial risk level
     const zoneData = await getZoneData(zone as Zone);
     const riskLevel = getRiskLevel(zoneData.disruptionProbability);
 
+    const passwordHash = await hashPassword(password);
+
     const worker = await prisma.worker.create({
       data: {
         name,
         phone,
+        passwordHash,
         zone,
         platforms,
         weeklyEarnings,

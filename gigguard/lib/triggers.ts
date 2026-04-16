@@ -2,18 +2,17 @@ import { TriggerType, TriggerData, ZoneRiskData } from "./types";
 
 // Trigger thresholds per the system design
 const THRESHOLDS = {
-  rainfall: { mmPerHr: 35, durationHrs: 1.5, peerDropPct: 30 },
-  aqi: { index: 300, restrictionHrs: 2 },
-  zoneShutdown: { durationHrs: 4 },
+  rainfall:       { mmPerHr: 35, durationHrs: 1.5, peerDropPct: 30 },
+  aqi:            { index: 300, restrictionHrs: 2 },
+  zoneShutdown:   { durationHrs: 4 },
   demandCollapse: { dropPct: 50, durationHrs: 3, workerDropPct: 40 },
-  extremeHeat: { tempCelsius: 44, durationHrs: 4 },
+  extremeHeat:    { tempCelsius: 44, durationHrs: 4 },
 };
 
 /** Evaluate which parametric triggers are breached for a given zone reading */
 export function evaluateTriggers(data: ZoneRiskData): TriggerData[] {
   const triggered: TriggerData[] = [];
 
-  // Trigger 1: Sustained Rainfall
   if (
     data.rainfallMm >= THRESHOLDS.rainfall.mmPerHr &&
     data.peerCorroboration >= THRESHOLDS.rainfall.peerDropPct
@@ -28,7 +27,6 @@ export function evaluateTriggers(data: ZoneRiskData): TriggerData[] {
     });
   }
 
-  // Trigger 2: Air Quality Restriction
   if (data.aqiIndex >= THRESHOLDS.aqi.index) {
     triggered.push({
       type: "AQI",
@@ -40,7 +38,6 @@ export function evaluateTriggers(data: ZoneRiskData): TriggerData[] {
     });
   }
 
-  // Trigger 3: Demand Collapse
   if (
     data.demandDropPct >= THRESHOLDS.demandCollapse.dropPct &&
     data.peerCorroboration >= THRESHOLDS.demandCollapse.workerDropPct
@@ -55,7 +52,6 @@ export function evaluateTriggers(data: ZoneRiskData): TriggerData[] {
     });
   }
 
-  // Trigger 4: Extreme Heat
   if (data.tempCelsius >= THRESHOLDS.extremeHeat.tempCelsius) {
     triggered.push({
       type: "Extreme Heat",
@@ -70,10 +66,18 @@ export function evaluateTriggers(data: ZoneRiskData): TriggerData[] {
   return triggered;
 }
 
-/** Calculate payout amount for a given trigger */
+/**
+ * Calculate payout for a triggered event.
+ *
+ * Coverage ceiling = one day's gross earnings.
+ * Payouts are designed to replace meaningful income loss:
+ *   - Full-day shutdowns (Rainfall, Extreme Heat, Zone Shutdown) → 100% of daily earnings
+ *   - Partial disruptions (AQI advisory) → 75% of daily earnings
+ *   - Demand collapse → proportional to drop severity (min 50%)
+ */
 export function calculatePayout(
   triggerData: TriggerData,
-  avgHourlyEarnings: number,
+  _avgHourlyEarnings: number,
   coverageCeiling: number
 ): number {
   let payout = 0;
@@ -81,28 +85,24 @@ export function calculatePayout(
   switch (triggerData.type) {
     case "Rainfall":
     case "Extreme Heat":
-      // Payout = lost hours × hourly earnings
-      payout = triggerData.duration * avgHourlyEarnings;
+    case "Zone Shutdown":
+      // Full day replacement — worker cannot operate during these events
+      payout = coverageCeiling;
       break;
 
     case "AQI":
-      // Proportional to restricted hours
-      payout = (triggerData.duration / 8) * avgHourlyEarnings * 8;
-      break;
-
-    case "Zone Shutdown":
-      // Full daily equivalent per day
-      payout = avgHourlyEarnings * 8;
+      // Partial — advisory restricts operations but doesn't fully shut zone
+      payout = Math.round(coverageCeiling * 0.75);
       break;
 
     case "Demand Collapse":
-      // Proportional to demand drop %
-      payout = (triggerData.value / 100) * avgHourlyEarnings * triggerData.duration;
+      // Proportional to demand drop, minimum 50% of daily earnings
+      // e.g. 60% demand drop → 60% of daily earnings
+      payout = Math.round(Math.max(triggerData.value / 100, 0.5) * coverageCeiling);
       break;
   }
 
-  // Cap at coverage ceiling
-  return Math.min(Math.round(payout), coverageCeiling);
+  return Math.min(payout, coverageCeiling);
 }
 
 export { THRESHOLDS };

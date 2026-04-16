@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, ChevronRight, CheckCircle, Zap } from "lucide-react";
+import { Shield, ChevronRight, CheckCircle, Zap, Eye, EyeOff } from "lucide-react";
 import { Platform, Zone } from "@/lib/types";
 import { saveSession } from "@/lib/client-auth";
 
@@ -30,9 +30,11 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [worker, setWorker] = useState<{ id: string; name: string } | null>(null);
 
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     name: "",
     phone: "",
+    password: "",
     zone: "" as Zone | "",
     platforms: [] as Platform[],
     weeklyEarnings: "",
@@ -152,6 +154,22 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    className="w-full glass border border-white/10 focus:border-emerald-500/50 rounded-xl px-4 pr-10 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
+                    placeholder="Min 6 characters"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Primary Operating Zone — Bengaluru</label>
                 <select
                   required value={form.zone}
@@ -167,7 +185,8 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => {
-                if (!form.name || !form.phone || !form.zone) { setError("Please fill all fields"); return; }
+                if (!form.name || !form.phone || !form.zone || !form.password) { setError("Please fill all fields"); return; }
+                if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
                 setError("");
                 setStep(2);
               }}

@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSession, DEMO_WORKER_ID } from "@/lib/client-auth";
 import { Policy, PremiumBreakdown } from "@/lib/types";
-import { Shield, CheckCircle, IndianRupee, ChevronDown, ChevronUp, Zap, Brain } from "lucide-react";
+import { Shield, CheckCircle, IndianRupee, ChevronDown, ChevronUp, Zap, Brain, Smartphone, QrCode, Loader2, Lock, X } from "lucide-react";
 import TriggerBadge from "@/components/TriggerBadge";
 import { COVERAGE_EXCLUSIONS } from "@/lib/fraud";
 
@@ -15,11 +15,16 @@ export default function PoliciesPage() {
   const [quote, setQuote] = useState<{ breakdown: PremiumBreakdown; zoneConditions: { activeTriggers: string[] } } | null>(null);
   const [loading, setLoading] = useState(true);
   const [quoteLoading, setQuoteLoading] = useState(false);
-  const [purchasing, setPurchasing] = useState(false);
-  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showExclusions, setShowExclusions] = useState(false);
+
+  // Payment modal state
+  const [paymentModal, setPaymentModal] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<"idle" | "qr" | "processing" | "done">("idle");
+  const [paymentTxnId, setPaymentTxnId] = useState("");
+  const [paymentOrderId, setPaymentOrderId] = useState("");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { loadPolicies(); fetchQuote(); }, []);
 
@@ -38,23 +43,175 @@ export default function PoliciesPage() {
     } finally { setQuoteLoading(false); }
   }
 
-  async function purchasePolicy() {
-    setPurchasing(true); setError("");
-    try {
-      const res = await fetch("/api/policies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workerId }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setSuccess(`Policy activated! Coverage up to Rs. ${data.coverageCeiling} this week.`);
-      loadPolicies();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Purchase failed");
-    } finally { setPurchasing(false); }
+  async function startPayment() {
+    setError("");
+    setPaymentModal(true);
+    setPaymentStep("qr");
+
+    // Step 1: Show QR for 2.5s
+    timerRef.current = setTimeout(async () => {
+      setPaymentStep("processing");
+
+      // Step 2: Actually call the API while "processing" is shown
+      try {
+        const res = await fetch("/api/policies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workerId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setPaymentTxnId(`TXN${Date.now()}`);
+        setPaymentOrderId(data.razorpayOrder?.orderId || `order_sim_${Date.now()}`);
+
+        // Step 3: Show success after 1.5s more
+        timerRef.current = setTimeout(() => {
+          setPaymentStep("done");
+          loadPolicies();
+        }, 1500);
+      } catch (err: unknown) {
+        setPaymentModal(false);
+        setPaymentStep("idle");
+        setError(err instanceof Error ? err.message : "Payment failed");
+      }
+    }, 2500);
+  }
+
+  function closePaymentModal() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPaymentModal(false);
+    setPaymentStep("idle");
   }
 
   const activePolicy = policies.find((p) => p.status === "Active");
+  const premium = quote?.breakdown.finalPremium ?? 0;
+  const coverage = quote?.breakdown.coverageCeiling ?? 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+
+      {/* UPI Payment Modal */}
+      {paymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="glass rounded-2xl border border-white/10 w-full max-w-sm p-6 space-y-5 relative">
+
+            {paymentStep !== "done" && (
+              <button onClick={closePaymentModal} className="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <IndianRupee className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <div className="font-bold text-white">GigGuard Weekly Premium</div>
+                <div className="text-xs text-slate-400">Powered by Razorpay · Sandbox Mode</div>
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div className="glass rounded-xl border border-white/5 p-4 text-center">
+              <div className="text-3xl font-black text-white flex items-center justify-center gap-1">
+                <IndianRupee className="w-6 h-6" />{premium}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">Coverage up to Rs. {coverage} · 5 triggers</div>
+            </div>
+
+            {/* Steps */}
+            {paymentStep === "qr" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center">
+                  <div className="relative">
+                    {/* Simulated QR code grid */}
+                    <div className="w-36 h-36 bg-white rounded-xl p-2 grid grid-cols-7 gap-0.5">
+                      {Array.from({ length: 49 }).map((_, i) => (
+                        <div key={i} className={`rounded-sm ${
+                          [0,1,2,3,4,5,6,7,13,14,20,21,27,28,34,35,41,42,43,44,45,46,47,48,8,15,22,29,36,10,17,24,31,38,11,18,25,32].includes(i)
+                            ? "bg-black" : "bg-white"
+                        }`} />
+                      ))}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-white rounded-lg p-1">
+                        <QrCode className="w-8 h-8 text-black" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <div className="text-sm font-medium text-slate-300">Scan with any UPI app</div>
+                  <div className="text-xs text-slate-500">GPay · PhonePe · Paytm · BHIM</div>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Waiting for payment confirmation...
+                </div>
+              </div>
+            )}
+
+            {paymentStep === "processing" && (
+              <div className="space-y-4">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 rounded-full border-4 border-blue-500/30 border-t-blue-400 animate-spin" />
+                  <div className="text-sm font-medium text-slate-300">Verifying payment...</div>
+                  <div className="text-xs text-slate-500">Confirming with Razorpay gateway</div>
+                </div>
+                <div className="space-y-2">
+                  {["Payment received", "Signature verified", "Activating policy..."].map((s, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-slate-400">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {paymentStep === "done" && (
+              <div className="space-y-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center">
+                    <CheckCircle className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <div className="text-lg font-bold text-emerald-400">Payment Successful!</div>
+                  <div className="text-xs text-slate-500 text-center">You're protected for the next 7 days</div>
+                </div>
+                <div className="glass rounded-xl border border-emerald-500/20 p-3 space-y-2 text-xs">
+                  {[
+                    ["Amount paid", `Rs. ${premium}`],
+                    ["Coverage", `Rs. ${coverage}`],
+                    ["Transaction ID", paymentTxnId],
+                    ["Order ID", paymentOrderId.slice(0, 20) + "..."],
+                    ["Payment method", "UPI (Simulated)"],
+                    ["Status", "✓ Confirmed"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between">
+                      <span className="text-slate-500">{k}</span>
+                      <span className="font-mono text-slate-300 text-right">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={closePaymentModal}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition-all"
+                >
+                  View My Policy
+                </button>
+              </div>
+            )}
+
+            {/* Razorpay branding */}
+            {paymentStep !== "done" && (
+              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-600 pt-1 border-t border-white/5">
+                <Lock className="w-3 h-3" /> Secured by Razorpay · Test Environment
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-black text-white flex items-center gap-2">
           <Shield className="w-6 h-6 text-emerald-400" /> Insurance Policies
@@ -162,23 +319,17 @@ export default function PoliciesPage() {
                 </div>
               )}
 
-              {success ? (
-                <div className="flex items-center gap-2 glass-emerald border border-emerald-500/20 rounded-xl p-4 text-emerald-300">
-                  <CheckCircle className="w-5 h-5" /> {success}
-                </div>
-              ) : (
-                <>
-                  {error && <p className="text-red-400 text-sm">{error}</p>}
-                  <button
-                    onClick={purchasePolicy} disabled={purchasing}
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold py-4 rounded-xl transition-all hover:scale-105 text-lg flex items-center justify-center gap-2"
-                  >
-                    <Zap className="w-5 h-5" />
-                    {purchasing ? "Processing..." : `Pay Rs. ${quote.breakdown.finalPremium} via UPI · Get Protected`}
-                  </button>
-                  <p className="text-center text-xs text-slate-600">Razorpay sandbox simulation · No real charges</p>
-                </>
-              )}
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <button
+                onClick={startPayment}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 rounded-xl transition-all hover:scale-105 text-lg flex items-center justify-center gap-2"
+              >
+                <Smartphone className="w-5 h-5" />
+                Pay Rs. {quote.breakdown.finalPremium} via UPI · Get Protected
+              </button>
+              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-600">
+                <Lock className="w-3 h-3" /> Razorpay sandbox simulation · No real charges
+              </div>
             </>
           ) : <p className="text-slate-500 text-sm">Could not load quote.</p>}
         </div>

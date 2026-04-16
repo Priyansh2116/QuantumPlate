@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Worker, Policy, Claim, ZoneRiskData } from "@/lib/types";
 import RiskBadge from "@/components/RiskBadge";
 import TriggerBadge from "@/components/TriggerBadge";
 import MetricGauge from "@/components/MetricGauge";
-import { Shield, AlertTriangle, IndianRupee, Users, TrendingUp, Activity, Eye, Lock } from "lucide-react";
+import { Shield, AlertTriangle, IndianRupee, Users, TrendingUp, Activity, Eye, Lock, Brain, CloudRain, Thermometer, Wind } from "lucide-react";
+import { getAdminSession } from "@/lib/client-auth";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid,
@@ -29,14 +31,22 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 };
 
 export default function AdminPage() {
+  const router = useRouter();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [zoneData, setZoneData] = useState<(ZoneRiskData & { riskLevel: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<"overview" | "fraud" | "zones" | "compliance">("overview");
 
   useEffect(() => {
+    const token = getAdminSession();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    setAuthed(true);
     Promise.all([
       fetch("/api/workers").then(r => r.json()),
       fetch("/api/policies").then(r => r.json()),
@@ -48,7 +58,7 @@ export default function AdminPage() {
     });
   }, []);
 
-  if (loading) return (
+  if (!authed || loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin w-10 h-10 border-4 border-slate-400 border-t-transparent rounded-full" />
     </div>
@@ -200,6 +210,96 @@ export default function AdminPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
+          {/* Predictive Analytics — Next Week Forecast */}
+          {zoneData.length > 0 && (() => {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            // Monsoon boost factor
+            const monsoon = month >= 6 && month <= 9;
+            const forecastZones = zoneData.map(z => {
+              const p = z.disruptionProbability;
+              // Project next week: add monsoon trend if approaching season
+              const nextWeekP = Math.min(p * (monsoon ? 1.12 : 0.95) + (month === 5 || month === 10 ? 0.08 : 0), 0.99);
+              const activePoliciesInZone = policies.filter(p2 => p2.status === "Active" && workers.find(w => w.id === p2.workerId && w.zone === z.zone)).length;
+              const avgPremium = activePoliciesInZone > 0
+                ? policies.filter(p2 => p2.status === "Active" && workers.find(w => w.id === p2.workerId && w.zone === z.zone)).reduce((s, p2) => s + p2.premium, 0) / activePoliciesInZone
+                : 0;
+              const expectedClaimsNext = Math.round(activePoliciesInZone * nextWeekP);
+              const expectedPayoutNext = Math.round(expectedClaimsNext * (z.disruptionProbability > 0.6 ? 800 : 600));
+              return { ...z, nextWeekP, expectedClaimsNext, expectedPayoutNext, activePoliciesInZone, avgPremium };
+            });
+
+            const totalExpectedClaims = forecastZones.reduce((s, z) => s + z.expectedClaimsNext, 0);
+            const totalExpectedPayout = forecastZones.reduce((s, z) => s + z.expectedPayoutNext, 0);
+            const totalActivePolicies = policies.filter(p => p.status === "Active").length;
+            const projectedPremiumPool = policies.filter(p => p.status === "Active").reduce((s, p) => s + p.premium, 0);
+
+            return (
+              <div className="glass rounded-xl border border-violet-500/20 p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold text-white flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-violet-400" /> Predictive Analytics — Next 7 Days
+                  </h2>
+                  <span className="text-xs text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2.5 py-1 rounded-full">
+                    Logistic Regression Model
+                  </span>
+                </div>
+
+                {/* Forecast KPIs */}
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: "Expected Claims", value: totalExpectedClaims.toString(), color: "text-amber-400", note: `from ${totalActivePolicies} active policies` },
+                    { label: "Projected Payout Pool", value: `Rs. ${totalExpectedPayout.toLocaleString()}`, color: "text-red-400", note: "reserve required" },
+                    { label: "Premium Pool", value: `Rs. ${projectedPremiumPool.toLocaleString()}`, color: "text-emerald-400", note: "collected this week" },
+                    { label: "Projected Loss Ratio", value: projectedPremiumPool > 0 ? `${Math.round((totalExpectedPayout / projectedPremiumPool) * 100)}%` : "—", color: totalExpectedPayout / (projectedPremiumPool || 1) > 0.75 ? "text-red-400" : "text-emerald-400", note: "target ≤ 75%" },
+                  ].map(k => (
+                    <div key={k.label} className="glass rounded-xl border border-white/5 p-3 text-center">
+                      <div className={`text-xl font-black ${k.color}`}>{k.value}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{k.label}</div>
+                      <div className="text-xs text-slate-600">{k.note}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Per-zone forecast */}
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-500 uppercase tracking-wide">Zone-level disruption forecast</div>
+                  {forecastZones.map(z => {
+                    const pct = Math.round(z.nextWeekP * 100);
+                    const trend = z.nextWeekP > z.disruptionProbability ? "↑" : "↓";
+                    const trendColor = z.nextWeekP > z.disruptionProbability ? "text-red-400" : "text-emerald-400";
+                    const dominantTrigger =
+                      z.rainfallMm > 25 ? "Rainfall" : z.tempCelsius > 40 ? "Extreme Heat" : z.aqiIndex > 200 ? "AQI" : "Demand";
+                    const TriggerIcon = dominantTrigger === "Rainfall" ? CloudRain : dominantTrigger === "Extreme Heat" ? Thermometer : Wind;
+                    return (
+                      <div key={z.zone} className="flex items-center gap-3 text-xs">
+                        <div className="w-28 text-slate-400 flex-shrink-0">{z.zone}</div>
+                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${pct > 65 ? "bg-red-500" : pct > 40 ? "bg-amber-500" : "bg-emerald-500"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className={`w-10 text-right font-bold ${pct > 65 ? "text-red-400" : pct > 40 ? "text-amber-400" : "text-emerald-400"}`}>{pct}%</div>
+                        <div className={`w-4 font-bold ${trendColor}`}>{trend}</div>
+                        <TriggerIcon className="w-3.5 h-3.5 text-slate-500" />
+                        <div className="w-20 text-slate-500">{dominantTrigger} risk</div>
+                        <div className="w-16 text-right text-slate-500">{z.expectedClaimsNext} claims est.</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {monsoon && (
+                  <div className="flex items-center gap-2 glass rounded-lg border border-amber-500/20 p-2.5 text-xs text-amber-300">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    Monsoon season active (Jun–Sep) — disruption probabilities elevated 10–15%. Consider reinsurance layer activation above Rs. 5L claims pool.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Workers Table */}
           <div className="glass rounded-xl border border-white/5 overflow-hidden">

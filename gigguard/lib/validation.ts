@@ -3,12 +3,18 @@ import { z } from "zod";
 export const RegisterWorkerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
   phone: z.string().regex(/^\d{10}$/, "Phone must be exactly 10 digits"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   zone: z.enum(["Koramangala", "Indiranagar", "HSR Layout", "Whitefield", "Marathahalli", "BTM Layout"]),
   platforms: z
     .array(z.enum(["Blinkit", "Zepto", "Swiggy Instamart", "BigBasket Now", "Amazon"]))
     .min(1, "Select at least one platform"),
   weeklyEarnings: z.number().min(500, "Weekly earnings must be at least Rs. 500").max(50000),
   hoursPerWeek: z.number().min(10, "Must work at least 10 hours/week").max(84),
+});
+
+export const LoginSchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "Phone must be 10 digits"),
+  password: z.string().min(1, "Password required"),
 });
 
 export const SendOtpSchema = z.object({

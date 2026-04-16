@@ -5,6 +5,7 @@
 const WORKER_ID_KEY = "gg_worker_id";
 const WORKER_NAME_KEY = "gg_worker_name";
 const TOKEN_KEY = "gg_token";
+const ADMIN_TOKEN_KEY = "gg_admin_token";
 
 export function saveSession(workerId: string, name: string, token: string) {
   if (typeof window === "undefined") return;
@@ -29,7 +30,21 @@ export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-/** Auth headers for API calls */
+export function saveAdminSession(token: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
+}
+
+export function getAdminSession(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ADMIN_TOKEN_KEY);
+}
+
+export function clearAdminSession() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+}
+
 export function authHeaders(token: string): HeadersInit {
   return {
     "Content-Type": "application/json",

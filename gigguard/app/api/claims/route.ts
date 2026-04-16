@@ -88,13 +88,25 @@ export async function POST(req: NextRequest) {
       if (existingClaim) continue;
 
       const payout = calculatePayout(trigger, avgHourlyEarnings, policy.coverageCeiling);
-      const zoneMedianShortfall = avgHourlyEarnings * trigger.duration * 0.6;
+
+      // Fetch recent approved payouts in this zone for z-score baseline
+      const recentZonePayouts = await prisma.claim.findMany({
+        where: { status: "Approved", worker: { zone: worker.zone } },
+        select: { approvedAmount: true },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      });
+      const zoneHistoricalPayouts = recentZonePayouts.map((c) => c.approvedAmount);
 
       const fraudResult = runFraudCheck({
         triggerData: trigger,
         workerActivityDuringClaim: Math.random() * 30, // real: pull from platform activity API
         claimedAmount: payout,
-        zoneMedianShortfall,
+        coverageCeiling: policy.coverageCeiling,
+        zoneHistoricalPayouts,
+        purchaseLeadHours: policy.paidAt
+          ? (Date.now() - new Date(policy.paidAt).getTime()) / 3_600_000
+          : 999,
         recentPurchasePrior24h: false,
         adverseSelectionCount: 0,
       });
@@ -102,7 +114,7 @@ export async function POST(req: NextRequest) {
       let status: "Approved" | "Under Review" | "Pending" | "Rejected" = "Pending";
       if (fraudResult.score >= 50) {
         status = "Under Review";
-      } else if (payout <= 500 && fraudResult.autoApprove) {
+      } else if (fraudResult.autoApprove) {
         status = "Approved";
       } else if (fraudResult.score < 30) {
         status = "Approved";

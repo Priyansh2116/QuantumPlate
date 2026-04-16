@@ -16,6 +16,7 @@ model Worker {
   hoursPerWeek    Float
   behavioralScore Int       @default(50)
   riskLevel       String    @default("Moderate")
+  passwordHash    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

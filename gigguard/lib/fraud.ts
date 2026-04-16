@@ -1,12 +1,23 @@
-import { TriggerData, Claim } from "./types";
+import { TriggerData } from "./types";
+import {
+  isolationForestScore,
+  rollingZScore,
+  detectGPSSpoofing,
+  checkWeatherBaseline,
+  GPSReading,
+} from "./risk-model";
 
 interface FraudCheckInput {
   triggerData: TriggerData;
   workerActivityDuringClaim: number; // % of normal activity (0-100)
   claimedAmount: number;
-  zoneMedianShortfall: number;
-  recentPurchasePrior24h: boolean; // bought policy < 24h before high-risk event
-  adverseSelectionCount: number; // how many times worker bought only before high-risk events
+  coverageCeiling: number;           // worker's daily earnings ceiling
+  zoneHistoricalPayouts: number[];   // recent approved payouts in zone (for z-score)
+  purchaseLeadHours: number;         // hours between policy purchase and claim
+  recentPurchasePrior24h: boolean;
+  adverseSelectionCount: number;
+  gpsReadings?: GPSReading[];        // GPS trace during claim window (optional)
+  claimMonth?: number;               // month of claim (1-12) for weather baseline
 }
 
 interface FraudResult {
@@ -14,24 +25,31 @@ interface FraudResult {
   flags: string[];
   autoApprove: boolean;
   requiresManualReview: boolean;
+  isolationScore: number;
+  zScore: number;
+  gpsSpoofed: boolean;
+  weatherPlausible: boolean;
 }
 
 /**
  * Two-layer fraud detection:
- * Layer 1: Rule-based (GPS mismatch, activity during claim, peer comparison)
- * Layer 2: Adverse selection pattern (Isolation Forest approximation)
+ *
+ * Layer 1 — Rule-based (GPS, activity, peer corroboration)
+ * Layer 2 — Statistical models:
+ *   • Isolation Forest: random partition anomaly score on 5 claim features
+ *   • Rolling Z-score: checks if claimed amount is within 2.5 SD of zone distribution
  */
 export function runFraudCheck(input: FraudCheckInput): FraudResult {
   const flags: string[] = [];
   let score = 0;
 
-  // Rule 1: GPS not confirmed — major red flag
+  // --- Layer 1: Rule-based ---
+
   if (!input.triggerData.gpsConfirmed) {
     flags.push("GPS zone mismatch: worker not in declared zone during disruption");
     score += 40;
   }
 
-  // Rule 2: Activity during claim — worker active at >60% normal rate
   if (input.workerActivityDuringClaim > 60) {
     flags.push(
       `High activity during claim: ${input.workerActivityDuringClaim}% of normal rate (threshold: 60%)`
@@ -39,16 +57,6 @@ export function runFraudCheck(input: FraudCheckInput): FraudResult {
     score += 30;
   }
 
-  // Rule 3: Claimed amount far above zone median (>2.5 SD proxy check)
-  const deviationRatio = input.claimedAmount / (input.zoneMedianShortfall || 1);
-  if (deviationRatio > 2.5) {
-    flags.push(
-      `Claimed amount ${deviationRatio.toFixed(1)}x above zone median — held for peer comparison`
-    );
-    score += 20;
-  }
-
-  // Rule 4: Low peer corroboration
   if (input.triggerData.peerCorroboration < 20) {
     flags.push(
       `Low peer corroboration: only ${input.triggerData.peerCorroboration}% of zone workers affected`
@@ -56,7 +64,6 @@ export function runFraudCheck(input: FraudCheckInput): FraudResult {
     score += 15;
   }
 
-  // Layer 2: Adverse selection pattern
   if (input.recentPurchasePrior24h && input.adverseSelectionCount > 2) {
     flags.push(
       "Adverse selection pattern: policy purchased within 24h of high-probability forecast (repeat)"
@@ -64,15 +71,90 @@ export function runFraudCheck(input: FraudCheckInput): FraudResult {
     score += 25;
   }
 
+  // --- Layer 1b: GPS Spoofing Detection ---
+
+  if (input.gpsReadings && input.gpsReadings.length >= 2) {
+    const gpsResult = detectGPSSpoofing(input.gpsReadings);
+    if (gpsResult.spoofed) {
+      flags.push(...gpsResult.flags);
+      score += 35;
+    }
+  }
+
+  // --- Layer 1c: Historical Weather Baseline ---
+
+  const weatherTriggerTypes = ["Rainfall", "AQI", "Extreme Heat"] as const;
+  type WeatherTrigger = typeof weatherTriggerTypes[number];
+  const isWeatherTrigger = (weatherTriggerTypes as readonly string[]).includes(input.triggerData.type);
+
+  let weatherPlausible = true;
+  if (isWeatherTrigger) {
+    const month = input.claimMonth ?? new Date().getMonth() + 1;
+    const baseline = checkWeatherBaseline(
+      input.triggerData.type as WeatherTrigger,
+      input.triggerData.value,
+      month
+    );
+    weatherPlausible = baseline.plausible;
+    if (!baseline.plausible && baseline.flag) {
+      flags.push(baseline.flag);
+      score += 25;
+    }
+  }
+
+  // --- Layer 2: Isolation Forest ---
+
+  const ifScore = isolationForestScore({
+    claimToMedianRatio: input.claimedAmount / (input.coverageCeiling || 1),
+    purchaseLeadHours: input.purchaseLeadHours,
+    activityDuringClaim: input.workerActivityDuringClaim,
+    adverseSelectionCount: input.adverseSelectionCount,
+    peerCorroboration: input.triggerData.peerCorroboration,
+  });
+
+  if (ifScore > 0.75) {
+    flags.push(
+      `Isolation Forest anomaly score ${ifScore.toFixed(2)} — claim pattern deviates significantly from zone distribution`
+    );
+    score += 20;
+  } else if (ifScore > 0.60) {
+    flags.push(`Isolation Forest score ${ifScore.toFixed(2)} — mild anomaly, flagged for review`);
+    score += 10;
+  }
+
+  // --- Layer 2: Rolling Z-score ---
+
+  const { z, isNormal } = rollingZScore(input.claimedAmount, input.zoneHistoricalPayouts);
+
+  if (!isNormal) {
+    flags.push(
+      `Z-score ${z} — claimed amount is >2.5 SD above zone historical mean (peer comparison required)`
+    );
+    score += 15;
+  }
+
   score = Math.min(score, 100);
 
-  const autoApprove = score < 30 && input.claimedAmount <= 500;
-  const requiresManualReview = score >= 50 || input.claimedAmount > 2000;
+  // Auto-approve if low fraud score and claim is within coverage ceiling
+  const autoApprove = score < 30 && input.claimedAmount <= input.coverageCeiling;
+  const requiresManualReview = score >= 50 || input.claimedAmount > input.coverageCeiling * 1.1;
 
-  return { score, flags, autoApprove, requiresManualReview };
+  const gpsSpoofed = input.gpsReadings
+    ? detectGPSSpoofing(input.gpsReadings).spoofed
+    : false;
+
+  return {
+    score,
+    flags,
+    autoApprove,
+    requiresManualReview,
+    isolationScore: Math.round(ifScore * 100) / 100,
+    zScore: z,
+    gpsSpoofed,
+    weatherPlausible,
+  };
 }
 
-// Get exclusion reasons (what GigGuard does NOT cover)
 export const COVERAGE_EXCLUSIONS = [
   "Health, illness, or hospitalization",
   "Life insurance or death benefits",
@@ -89,7 +171,6 @@ export const COVERAGE_EXCLUSIONS = [
   "Retrospective claims for periods before policy activation",
 ];
 
-// Regulatory compliance notes
 export const REGULATORY_NOTES = {
   framework: "IRDAI Regulatory Sandbox (Parametric Insurance Products)",
   partnerRequirement: "Licensed insurer required as risk-carrying entity for commercial launch",
