@@ -2,7 +2,9 @@
 
 ---
 **Demo Video**
-[![ShieldRide Demo](https://img.youtube.com/vi/VwUrIVXWNUs/maxresdefault.jpg)](https://youtu.be/VwUrIVXWNUs?si=xqD2qABC5ijJAj5r)
+[![ShieldRide Demo](https://img.youtube.com/vi/VwUrIVXWNUs/maxresdefault.jpg)](https://youtu.be/DOdYsbAFXfw?si=-3mTE5BTzRhctCjS)
+**Pitch deck**
+[View Slide Deck](https://drive.google.com/file/d/18eVjO2p4iPEnJUe4sdnZCdfiSHZl3TFQ/view?usp=sharing)
 ## Table of Contents
 
 1. [The Problem](#1-the-problem)
@@ -121,6 +123,11 @@ Workers with consistently high Behavioral Scores also gain access to enhanced be
 ---
 
 ## 6. AI/ML Integration
+
+### Predictive Payout Model (Admin)
+**Goal**: Estimate the likelihood of a payout event for admin-side forecasting and actuarial review.  
+**Inputs**: Disruption probability, earnings shortfall percentage, zone risk score, peer signal strength.  
+**Model**: Logistic Regression — outputs a payout probability (0.0–1.0) used on the admin dashboard to forecast weekly payout exposure across zones.
 
 ### Risk Prediction Model
 **Goal**: Estimate the probability that a worker in a given zone will face income disruption in the upcoming week.  
@@ -381,6 +388,7 @@ The pricing system learns from worker behavior over time. Workers who consistent
 ## 13. Dashboard Features
 
 ![Dashboard](./assets/dashboard.jpg)
+
 The above dashboard is a mock UI. The final dashboard may differ.
 ### Worker Dashboard
 - **Home**: Weekly risk score (Low / Moderate / High / Elevated), active policy status and trigger indicators, earnings vs. baseline bar chart, one-tap plan renewal
@@ -391,6 +399,9 @@ The above dashboard is a mock UI. The final dashboard may differ.
 - **Payout History**: All payouts by date, trigger type, and amount; pending transfer status; in-app wallet balance
 
 ### Admin Dashboard
+**Admin Access**
+- Username: `admin`
+- Password: `gigguard-admin-2026`
 - **Overview**: Total enrolled workers by city and zone, active policies this week, total premiums collected vs. payouts issued, platform-wide Loss Ratio
 - **Actuarial View**: Zone-level risk heatmap, Loss Ratio trend chart by zone and month, zones flagged above the 0.80 threshold
 - **Trigger Monitor**: Real-time trigger status across all active zones, full event log with workers affected and total payout per event, trigger accuracy analytics (predicted vs. realized)
