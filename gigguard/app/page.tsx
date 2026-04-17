@@ -88,7 +88,7 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 glass border border-emerald-500/20 px-4 py-2 rounded-full text-sm">
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
               <span className="text-emerald-400 font-medium">Guidewire DEVTrails 2026</span>
-              <span className="text-slate-400">— Phase 2 Submission</span>
+              <span className="text-slate-400">— Phase 3 Submission</span>
             </div>
 
             <h1 className="text-5xl md:text-6xl font-black leading-tight">
